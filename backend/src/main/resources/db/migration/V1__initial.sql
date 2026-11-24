@@ -1,31 +1,34 @@
-CREATE TABLE IF NOT EXISTS user (
+CREATE TABLE users (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name TEXT NOT NULL CHECK (length(trim(name)) > 0),
-    password_hash TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL CHECK (length(trim(name)) > 0),
+    password_hash VARCHAR(100) NOT NULL,
+    email VARCHAR(255) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
+);
+CREATE UNIQUE INDEX uq_users_email ON users(lower(email));
 
-CREATE TABLE IF NOT EXISTS project (
+CREATE TABLE projects (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+    name VARCHAR(100) NOT NULL CHECK (length(trim(name)) > 0),
     description TEXT,
-    owner_id BIGINT NOT NULL REFERENCES user(id),
+    owner_id BIGINT NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
+);
+CREATE INDEX ix_projects_user ON projects(owner_id);
 
-CREATE TYPE task_status AS ENUM ('todo', 'in_progress', 'done');
-CREATE TYPE priority_level AS ENUM ('low', 'medium', 'high');
 
-CREATE TABLE IF NOT EXISTS task (
+CREATE TABLE tasks (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+    title VARCHAR(120) NOT NULL CHECK (length(trim(title)) > 0),
     description TEXT,
-    status task_status DEFAULT 'todo',
-    priority priority_level NOT NULL,
-    due_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    assignee_id BIGINT REFERENCES user(id),
-    project_id BIGINT NOT NULL REFERENCES project(id),
+    status VARCHAR(20) NOT NULL DEFAULT 'TODO' CHECK(status IN ('TODO', 'IN_PROGRESS', 'DONE')),
+    priority VARCHAR(10) NOT NULL DEFAULT 'MEDIUM' CHECK(priority IN ('LOW', 'MEDIUM', 'HIGH')),
+    due_date DATE,
+    assignee_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-)
+);
+
+CREATE INDEX ix_tasks_project_due ON tasks (project_id, due_date);
+CREATE INDEX ix_tasks_assignee ON tasks (assignee_id);
