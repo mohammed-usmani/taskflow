@@ -51,7 +51,7 @@ are in the code.
 
 ```bash
 cd backend && ./gradlew test    # 36 tests: JUnit 5 + MockK unit tests, @SpringBootTest integration tests
-cd frontend && npm test         # 18 tests: Jest + React Testing Library
+cd frontend && npm test         # 20 tests: Jest + React Testing Library
 ```
 
 - **Backend unit tests (MockK):** `AuthServiceTest`, `ProjectServiceTest`, `TaskServiceTest`,
@@ -65,7 +65,7 @@ cd frontend && npm test         # 18 tests: Jest + React Testing Library
 - **Frontend component tests** render the real routes and providers with only the API layer mocked:
   - login and protected routes;
   - projects list and create;
-  - the board (columns, overdue, optimistic status change and rollback, filters in the URL);
+  - the board (columns, overdue, optimistic status change and rollback, keyboard drag-and-drop, filters in the URL);
   - the task form (validation, create/edit payloads, delete confirmation).
 
 CI (GitHub Actions) runs both suites on pushes to `main` and on pull requests. The backend job starts a PostgreSQL service container.
@@ -84,7 +84,7 @@ frontend/src/
   api/         axios client + interceptors, one module per resource, shared types, query keys
   auth/        AuthContext, ProtectedRoute / GuestRoute
   components/  Button, Modal, Field, TaskCard, TaskFormModal, TaskFilters, SummaryBar, states
-  pages/       Login, Register, Projects, ProjectBoard (+ useBoard hook)
+  pages/       Login, Register, Projects, ProjectBoard (+ useBoard hook, BoardColumns with drag-and-drop)
 ```
 
 **Backend:** `controller → service → repository`, packaged by feature.
@@ -116,6 +116,9 @@ frontend/src/
 - **Auth state:** a small Context.
 - **Forms:** react-hook-form + zod, with the same rules as the backend.
 - **Filters and sort** live in the URL, so a reload or a shared link keeps the view.
+- **Moving tasks:** drag a card by its handle (⠿) to another column, or use its status dropdown.
+  Both call the same mutation. Drag-and-drop uses `@dnd-kit` and works with mouse, touch and keyboard
+  (focus the handle, Space, arrow keys to change column, Space to drop), with screen-reader announcements.
 
 ## Design patterns
 
@@ -131,8 +134,8 @@ frontend/src/
 **React Query for server data, Context for auth.**
 - **Almost everything on screen is server data:** projects, tasks, the summary and users. React Query
   gives every call loading, error and retry states, caching, and invalidation after a change.
-- **The status dropdown uses an optimistic update:** the card moves at once, rolls back if the server
-  refuses, and refetches either way.
+- **Status changes (drag-and-drop or dropdown) use an optimistic update:** the card moves at once, rolls
+  back if the server refuses, and refetches either way.
 - **Redux Toolkit would mean re-implementing that by hand** for little gain at this size.
 - **The only client-only state is "who is logged in",** which a small Context covers.
 
@@ -154,7 +157,8 @@ frontend/src/
 - **Tokens can't be revoked before they expire** (60 minutes). Next: refresh tokens with a server-side denylist.
 - **The board loads up to 100 tasks** (the API's page cap) and shows a notice beyond that. Next: per-column
   pagination or infinite scroll.
-- **The status dropdown** meets the brief. Next: drag-and-drop with `@dnd-kit` on top of the same mutation.
+- **Drag-and-drop moves a task between columns, not within one.** The API has no manual ordering; cards
+  follow the chosen sort. Next: a `position` column, if hand-ordering within a column is wanted.
 - **`GET /api/users` isn't paginated.** Fine for small teams. Next: search and paging, or project members
   (which would also extend visibility to assignees).
 - **Activity log (bonus) not built.** Plan: a `task_activity` table written in the same transaction as each

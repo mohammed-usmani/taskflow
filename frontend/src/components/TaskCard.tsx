@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { Task, TaskStatus } from '../api/types'
 import { STATUSES } from '../api/types'
 import { formatDate, priorityLabel, statusLabel } from './labels'
@@ -12,20 +13,24 @@ interface Props {
   task: Task
   onStatusChange: (status: TaskStatus) => void
   onEdit?: () => void
+  dragHandle?: ReactNode // the board passes one; the drag overlay copy has none
 }
 
 /**
  * One task on the board. Overdue is shown with a red border AND the word "Overdue",
  * so it doesn't rely on colour alone.
  */
-export function TaskCard({ task, onStatusChange, onEdit }: Props) {
+export function TaskCard({ task, onStatusChange, onEdit, dragHandle }: Props) {
   return (
     <article
       aria-label={task.title}
       className={`rounded-md border bg-white p-3 shadow-sm ${task.overdue ? 'border-red-400 ring-1 ring-red-200' : 'border-slate-200'}`}
     >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-sm font-medium break-words text-slate-900">{task.title}</h3>
+        <div className="flex min-w-0 items-start gap-1">
+          {dragHandle}
+          <h3 className="text-sm font-medium break-words text-slate-900">{task.title}</h3>
+        </div>
         <span className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${priorityStyle[task.priority]}`}>
           {priorityLabel[task.priority]}
         </span>

@@ -1,15 +1,14 @@
 import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { errorMessage } from '../api/client'
-import { STATUSES, type Task, type TaskPriority, type TaskQuery, type TaskStatus } from '../api/types'
+import type { Task, TaskPriority, TaskQuery } from '../api/types'
 import { Button } from '../components/Button'
 import { SummaryBar } from '../components/SummaryBar'
 import { TaskFilters } from '../components/TaskFilters'
 import { SORTS, type FilterValues, type SortKey } from '../components/filterValues'
 import { TaskFormModal } from '../components/TaskFormModal'
-import { TaskCard } from '../components/TaskCard'
 import { ErrorState, Loading } from '../components/States'
-import { statusLabel } from '../components/labels'
+import { BoardColumns } from './BoardColumns'
 import { BOARD_PAGE_SIZE, useBoard } from './useBoard'
 
 export function ProjectBoardPage() {
@@ -78,17 +77,11 @@ export function ProjectBoardPage() {
           {tasks.data.totalItems > BOARD_PAGE_SIZE && (
             <p className="text-sm text-amber-700">Showing the first {BOARD_PAGE_SIZE} of {tasks.data.totalItems} tasks.</p>
           )}
-          <div className="grid gap-4 md:grid-cols-3">
-            {STATUSES.map((status) => (
-              <Column
-                key={status}
-                status={status}
-                tasks={tasks.data.items.filter((t) => t.status === status)}
-                onStatusChange={(id, s) => changeStatus.mutate({ id, status: s })}
-                onEdit={setForm}
-              />
-            ))}
-          </div>
+          <BoardColumns
+            tasks={tasks.data.items}
+            onStatusChange={(id, status) => changeStatus.mutate({ id, status })}
+            onEdit={setForm}
+          />
         </>
       )}
 
@@ -99,29 +92,3 @@ export function ProjectBoardPage() {
   )
 }
 
-function Column({ status, tasks, onStatusChange, onEdit }: {
-  status: TaskStatus
-  tasks: Task[]
-  onStatusChange: (id: number, status: TaskStatus) => void
-  onEdit: (task: Task) => void
-}) {
-  return (
-    <section aria-label={statusLabel[status]} className="rounded-lg bg-slate-100 p-3">
-      <h2 className="mb-3 flex items-center justify-between text-sm font-semibold text-slate-700">
-        {statusLabel[status]}
-        <span className="rounded-full bg-white px-2 text-xs text-slate-500">{tasks.length}</span>
-      </h2>
-      {tasks.length === 0 ? (
-        <p className="rounded-md border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500">No tasks</p>
-      ) : (
-        <ul className="space-y-2">
-          {tasks.map((t) => (
-            <li key={t.id}>
-              <TaskCard task={t} onStatusChange={(s) => onStatusChange(t.id, s)} onEdit={() => onEdit(t)} />
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  )
-}

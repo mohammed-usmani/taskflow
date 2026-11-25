@@ -89,3 +89,47 @@ test('filters are read back from the URL on load', async () => {
   expect(await screen.findByLabelText('Priority')).toHaveValue('LOW')
   expect(tasks.list).toHaveBeenCalledWith(1, expect.objectContaining({ priority: 'LOW', sort: 'priority', direction: 'desc' }))
 })
+
+describe('drag and drop', () => {
+  // jsdom has no layout: every element measures 0x0. Give each column (and anything
+  // inside it) a 280x600 box side by side, so dnd-kit can tell which column a card is over.
+  beforeEach(() => {
+    jest.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      const column = this.closest<HTMLElement>('[data-column]')?.dataset.column
+      const left = ['TODO', 'IN_PROGRESS', 'DONE'].indexOf(column ?? 'TODO') * 300
+      return { left, top: 0, width: 280, height: 600, right: left + 280, bottom: 600, x: left, y: 0, toJSON: () => ({}) }
+    })
+  })
+  afterEach(() => jest.restoreAllMocks())
+
+  test('keyboard drag moves a task to the next column and saves it', async () => {
+    // first load: To Do; the refetch after saving returns what the server now has
+    tasks.list.mockResolvedValueOnce(page([task(1, 'Ship it')])).mockResolvedValue(page([task(1, 'Ship it', { status: 'IN_PROGRESS' })]))
+    tasks.updateStatus.mockResolvedValue(task(1, 'Ship it', { status: 'IN_PROGRESS' }))
+    renderApp('/projects/1')
+
+    ;(await screen.findByRole('button', { name: 'Move Ship it' })).focus()
+    await userEvent.keyboard(' ')            // pick up
+    await userEvent.keyboard('{ArrowRight}') // to In Progress
+    await userEvent.keyboard(' ')            // drop
+
+    expect(tasks.updateStatus).toHaveBeenCalledWith(1, 'IN_PROGRESS')
+    expect(await within(screen.getByRole('region', { name: 'In Progress' })).findByRole('article', { name: 'Ship it' })).toBeInTheDocument()
+  })
+
+  test('dropping back on the same column, or cancelling, saves nothing', async () => {
+    tasks.list.mockResolvedValue(page([task(1, 'Ship it')]))
+    renderApp('/projects/1')
+    const handle = await screen.findByRole('button', { name: 'Move Ship it' })
+
+    handle.focus()
+    await userEvent.keyboard(' ')
+    await userEvent.keyboard(' ')            // dropped where it started
+    handle.focus()
+    await userEvent.keyboard(' ')
+    await userEvent.keyboard('{ArrowRight}')
+    await userEvent.keyboard('{Escape}')     // cancelled
+
+    expect(tasks.updateStatus).not.toHaveBeenCalled()
+  })
+})
