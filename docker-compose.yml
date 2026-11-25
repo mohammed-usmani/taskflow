@@ -1,5 +1,5 @@
 # One command for everything:  docker compose up --build
-# (Frontend service is added once the frontend exists.)
+# App: http://localhost:3000   API docs: http://localhost:8080/swagger-ui.html
 services:
   postgres:
     image: postgres:17
@@ -36,6 +36,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 30
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy   # nginx forwards /api to it
 
 volumes:
   pgdata:
