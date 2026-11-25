@@ -1,5 +1,9 @@
 package com.taskflow.task
 
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.jpa.domain.Specification
+import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Query
@@ -10,6 +14,12 @@ interface TaskRepository : JpaRepository<Task, Long>, JpaSpecificationExecutor<T
     // PUT / PATCH / DELETE /api/tasks/{id}: the task, only if its project is mine.
     // Path: task.project.owner.id
     fun findByIdAndProjectOwnerId(id: Long, ownerId: Long): Task?
+
+    // The filtered, paged list. @EntityGraph loads each task's assignee in the SAME
+    // query (a join). Without it, mapping 20 tasks to DTOs would fire up to 20 extra
+    // SELECTs for assignee names: the N+1 problem.
+    @EntityGraph(attributePaths = ["assignee"])
+    override fun findAll(spec: Specification<Task>?, pageable: Pageable): Page<Task>
 
     // GET /api/projects/{id}/summary: count per status, ONE query
     @Query("""
