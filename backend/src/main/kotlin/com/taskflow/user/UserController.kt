@@ -11,6 +11,13 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/api/users")
 class UserController(private val users: UserRepository) {
 
+    // Everyone who can be assigned a task (assignee dropdown). Assumption, in the README:
+    // there are no teams in the brief, so any registered user is assignable. Only id, name
+    // and email are returned, never password hashes.
+    // ponytail: unpaged; add ?q= search + paging once there are more than a few hundred users.
+    @GetMapping
+    fun list(): List<UserResponse> = users.findAllByOrderByNameAsc().map(UserResponse::from)
+
     // Who am I? The frontend calls this on load to show the name and to check the token.
     // @AuthenticationPrincipal = the principal JwtAuthFilter put in the SecurityContext.
     @GetMapping("/me")

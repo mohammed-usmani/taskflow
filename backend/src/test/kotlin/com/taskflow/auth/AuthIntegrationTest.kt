@@ -94,4 +94,15 @@ class AuthIntegrationTest(
             jsonPath("$.email") { value("ali@example.com") }
         }
     }
+
+    @Test
+    fun `users list is for logged-in users and never exposes password hashes`() {
+        mvc.get("/api/users").andExpect { status { isUnauthorized() } }
+        val token = json.readTree(register().andReturn().response.contentAsString)["token"].asText()
+        mvc.get("/api/users") { header("Authorization", "Bearer $token") }.andExpect {
+            status { isOk() }
+            jsonPath("$[?(@.email == 'ali@example.com')].name") { value("Ali") }
+            jsonPath("$[*].passwordHash") { doesNotExist() }
+        }
+    }
 }
