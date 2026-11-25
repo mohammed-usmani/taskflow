@@ -57,8 +57,10 @@ export function BoardColumns({ tasks, onStatusChange, onEdit }: Props) {
           />
         ))}
       </div>
-      {/* The card that follows the pointer. Rendered on top of everything, so it isn't clipped by its column. */}
-      <DragOverlay>{dragging && <TaskCard task={dragging} onStatusChange={() => {}} />}</DragOverlay>
+      {/* The card that follows the pointer. Rendered on top of everything, so it isn't clipped by its column.
+          dropAnimation={null}: the default animation flies the copy back to where the card started,
+          which looks like the move failed. The optimistic update already puts the card in its new column. */}
+      <DragOverlay dropAnimation={null}>{dragging && <TaskCard task={dragging} onStatusChange={() => {}} />}</DragOverlay>
     </DndContext>
   )
 }
